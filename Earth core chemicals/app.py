@@ -3,7 +3,6 @@ import csv
 
 app = Flask(__name__)
 
-# Define global variables at the top so the server doesn't crash on startup
 name = ""
 address = ""
 number = ""
@@ -99,7 +98,7 @@ def place_order():
         f.seek(0)
         data56 = csv.reader(f)
         for row in data56:
-            if row: # Check if row is not empty
+            if row: 
                 SNo += 1
         if SNo > 0:
             SNo = SNo - 1
@@ -157,7 +156,6 @@ def countig(check_name):
         v = csv.reader(file)
         za = 0
         for row in v:
-            # Added len(row) > 1 to prevent immediate server crashes on empty lines
             if len(row) > 1 and row[1].strip().lower() == check_name.strip().lower():
                 za += 1
         return za
