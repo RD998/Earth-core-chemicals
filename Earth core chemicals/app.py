@@ -1,30 +1,32 @@
 from flask import Flask, render_template, request, redirect, url_for
 import csv
+
 app = Flask(__name__)
+
+# Define global variables at the top so the server doesn't crash on startup
+name = ""
+address = ""
+number = ""
+item_name = ""
+total_price = 0
+
 data2 = {
-        "item_name": [],
-        "quantity": [],
-    }
+    "item_name": [],
+    "quantity": [],
+}
+
 @app.route("/")
 def home():
     return render_template("home.html")
 
-
-
 @app.route("/customer")
 def customer_dashboard():
-    
-    """with open("total.txt", "r") as f:
-        total = int(f.read())"""
-    count=countig(name)
-      
-
-    return render_template("customer_dashboard.html",count=count)
+    count = countig(name)
+    return render_template("customer_dashboard.html", count=count)
 
 @app.route("/customer_detai")
 def customer_details():
     return render_template("customer_details.html")
-
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
@@ -39,27 +41,23 @@ def admin_login():
 
 @app.route("/details", methods=["GET", "POST"])
 def detailsig():
+    global name, address, number
     if request.method == "POST":
-        global name,address,number
         name = request.form["Name"]
-        address = request.form["address"]+"       "
+        address = request.form["address"] + "      "
         number = request.form["number"]
         return redirect(url_for("customer_dashboard"))
     else:
         return redirect(url_for("customer_details"))
-    
-    
-        
-    
-
 
 @app.route('/place_order', methods=['POST'])
 def place_order():
-    global item_name,total_price
+    global item_name, total_price, name, address, number
     item_name = request.form.get("item_name") 
     quantity = int(request.form.get("quantity"))  
-    count = countig(name)+1
+    count = countig(name) + 1
     data = []
+    
     with open("products.csv", "r") as f:
         lines1 = f.readlines()
 
@@ -71,6 +69,10 @@ def place_order():
     found = False
     total_price = 0
     for row in data:
+        # Safety check to prevent index crashes on empty lines
+        if len(row) < 3: 
+            continue
+            
         Item = row[0]
         Quantity = int(row[1])
         Price = int(row[2])
@@ -88,40 +90,34 @@ def place_order():
     if not found:
         print("Product not found")
         return render_template("customer_dashboard.html", count=count, error="Product not found")
-    if count==10:
-        total_price=0
+    
+    if count == 10:
+        total_price = 0
     
     with open("purchases.csv", "a+") as f:
-        SNo=0
-        data56=csv.reader(f)
+        SNo = 0
         f.seek(0)
+        data56 = csv.reader(f)
         for row in data56:
-            SNo +=1
-        SNo=SNo-1
+            if row: # Check if row is not empty
+                SNo += 1
+        if SNo > 0:
+            SNo = SNo - 1
         f.write(f"{SNo},{name},{number},{address},{item_name},{total_price}\n")
 
     return render_template("customer_dashboard.html", count=count)
-
-    
-
 
 @app.route("/admin_dashboard")
 def admin_dashboard():
     with open("purchases.csv", "r") as f:
         lines = f.readlines()
-
     
     if lines and not lines[0].strip()[0].isdigit():
         lines = lines[1:]
 
     global data2
     data2 = {
-        "SNo": [],
-        "name": [],
-        "number": [],
-        "address": [],
-        "item_name": [],
-        "total_price": [],
+        "SNo": [], "name": [], "number": [], "address": [], "item_name": [], "total_price": []
     }
 
     for line in lines:
@@ -142,7 +138,7 @@ def admin_dashboard():
         html += f"    <th>{header}</th>\n"
     html += "  </tr>\n"
 
-    rows_count = len(data2[headers[0]])
+    rows_count = len(data2[headers[0]]) if headers else 0
     for i in range(rows_count):
         html += "  <tr>\n"
         for header in headers:
@@ -153,15 +149,17 @@ def admin_dashboard():
 
     return render_template("admin_dashboard.html", data2=data2, html=html)
 
-
-def countig(name):
+def countig(check_name):
+    if not check_name: 
+        return 0
     with open("purchases.csv", "r") as file:
         file.seek(0)
-        v=csv.reader(file)
-        za=0
+        v = csv.reader(file)
+        za = 0
         for row in v:
-            if row[1].strip().lower() == name.strip().lower():
-                za +=1
+            # Added len(row) > 1 to prevent immediate server crashes on empty lines
+            if len(row) > 1 and row[1].strip().lower() == check_name.strip().lower():
+                za += 1
         return za
 
 if __name__ == '__main__':
